@@ -17,7 +17,11 @@ def download_yfinance(ticker: str, start: str, end: str) -> pd.DataFrame:
     import yfinance as yf
     df = yf.download(ticker, start=start, end=end, progress=False, auto_adjust=True)
     df.index = pd.to_datetime(df.index)
-    df.columns = [c.lower() for c in df.columns]
+    # yfinance may return MultiIndex columns — flatten to first level
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = [c[0].lower() for c in df.columns]
+    else:
+        df.columns = [c.lower() for c in df.columns]
     return df[["open", "high", "low", "close", "volume"]]
 
 
