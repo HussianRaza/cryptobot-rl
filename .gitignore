@@ -10,6 +10,6 @@ frontend/dist/
 .venv/
 venv/
 *.zip.backup
-logs/
+logs/tb/
 .DS_Store
 *.env
