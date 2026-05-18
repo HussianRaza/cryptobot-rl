@@ -1,0 +1,15 @@
+references/
+data/raw/*.csv
+models/checkpoints/
+__pycache__/
+*.pyc
+*.egg-info/
+.eggs/
+node_modules/
+frontend/dist/
+.venv/
+venv/
+*.zip.backup
+logs/
+.DS_Store
+*.env
