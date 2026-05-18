@@ -12,7 +12,7 @@ ANNUALIZATION = 252 ** 0.5
 def sharpe_annualised(equity_curve: pd.Series, risk_free: float = 0.04) -> float:
     """Annualised Sharpe ratio from a daily equity curve."""
     returns = equity_curve.pct_change().dropna()
-    if returns.std() < 1e-10:
+    if len(returns) < 2 or returns.std() < 1e-10:
         return 0.0
     rf_daily = risk_free / 252
     return float(ANNUALIZATION * (returns.mean() - rf_daily) / returns.std())
