@@ -5,6 +5,7 @@ Hyperparameters aligned with FinRL's validated trading config
 """
 import os
 import numpy as np
+import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -13,10 +14,15 @@ from stable_baselines3.common.callbacks import CallbackList
 from agents.callbacks import MetricsCallback, make_checkpoint_callback
 from env import SEED
 
+# Use GPU when available (T4 on Colab), fall back to CPU
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
 PPO_HYPERPARAMS = dict(
     policy="MlpPolicy",
     n_steps=2048,
-    batch_size=64,
+    # 256 saturates T4 GPU better (8192 rollout steps → 32 minibatch updates/epoch);
+    # still divides 8192 evenly and is valid on CPU too
+    batch_size=256,
     n_epochs=10,
     learning_rate=2.5e-4,
     gamma=0.99,
@@ -28,6 +34,7 @@ PPO_HYPERPARAMS = dict(
     tensorboard_log="logs/tb/",
     seed=SEED,
     verbose=1,
+    device=DEVICE,
 )
 
 

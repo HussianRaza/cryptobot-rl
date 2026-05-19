@@ -11,11 +11,12 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import torch
 import pandas as pd
 import numpy as np
 
 from env.crypto_trading_env import CryptoTradingEnv, OHLCV_COLS
-from agents.ppo_agent import PPOAgent
+from agents.ppo_agent import PPOAgent, DEVICE
 from env import SEED
 
 SPLIT_DATES = {
@@ -52,6 +53,7 @@ def main():
     args = parser.parse_args()
 
     print(f"Training PPO on {args.asset} for {args.timesteps:,} timesteps (seed={args.seed}, tag={args.tag})")
+    print(f"  device: {DEVICE}" + (f" ({torch.cuda.get_device_name(0)})" if DEVICE == "cuda" else ""))
 
     df_train = load_split_df(args.asset, "train")
     print(f"  train rows: {len(df_train)}")
