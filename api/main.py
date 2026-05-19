@@ -10,8 +10,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
 def _try_load_model(asset: str):
-    """Load a trained PPO model if the zip exists, silently skip if missing."""
-    from agents.ppo_agent import PPOAgent
+    """Load a trained PPO model if the zip exists, silently skip if SB3/model missing."""
+    try:
+        from agents.ppo_agent import PPOAgent
+    except ImportError:
+        print(f"  stable-baselines3 not installed — PPO models unavailable (baselines/data endpoints still work)")
+        return None
     model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models", f"ppo_{asset}_final.zip")
     if os.path.exists(model_path):
         print(f"  Loading PPO model for {asset}...")

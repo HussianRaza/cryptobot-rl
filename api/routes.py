@@ -17,8 +17,6 @@ from baselines.mean_reversion import MeanReversion
 from baselines.momentum import Momentum
 from baselines.random_agent import RandomAgent
 from baselines.metrics import compute_all
-from env.crypto_trading_env import CryptoTradingEnv, OHLCV_COLS
-from env import SEED
 
 router = APIRouter()
 
@@ -46,8 +44,9 @@ def _load_split(asset: str, split: str) -> pd.DataFrame:
 
 
 def _train_stats(df_train: pd.DataFrame) -> dict:
-    means = df_train[OHLCV_COLS].mean().to_dict()
-    stds = {k: max(v, 1e-8) for k, v in df_train[OHLCV_COLS].std().to_dict().items()}
+    ohlcv_cols = ["open", "high", "low", "close", "volume"]
+    means = df_train[ohlcv_cols].mean().to_dict()
+    stds = {k: max(v, 1e-8) for k, v in df_train[ohlcv_cols].std().to_dict().items()}
     return {"means": means, "stds": stds}
 
 
@@ -61,6 +60,12 @@ def _run_ppo(asset: str, df_test: pd.DataFrame, train_stats: dict, request: Requ
     agent = getattr(request.app.state, model_key, None)
     if agent is None:
         raise HTTPException(404, f"PPO model for {asset} not loaded. Run train_ppo.py first.")
+
+    try:
+        from env.crypto_trading_env import CryptoTradingEnv
+        from env import SEED
+    except ImportError as e:
+        raise HTTPException(503, f"Gymnasium not installed ({e}). PPO inference unavailable.")
 
     env = CryptoTradingEnv(df_test.copy(), scaler_stats=train_stats)
     obs, _ = env.reset(seed=SEED)
