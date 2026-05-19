@@ -49,6 +49,9 @@ def main():
     parser.add_argument("--seed", type=int, default=SEED)
     parser.add_argument("--tag", default="final")
     parser.add_argument("--n-envs", type=int, default=4)
+    parser.add_argument("--n-steps", type=int, default=None, help="PPO rollout steps per env (overrides default)")
+    parser.add_argument("--batch-size", type=int, default=None, help="PPO minibatch size (overrides default)")
+    parser.add_argument("--subproc", action="store_true", help="Use SubprocVecEnv for true parallel envs")
     parser.add_argument("--checkpoint-freq", type=int, default=10_000)
     args = parser.parse_args()
 
@@ -64,7 +67,13 @@ def main():
         return CryptoTradingEnv(df_train.copy(), scaler_stats=train_stats)
 
     agent = PPOAgent()
-    agent.build(env_factory, n_envs=args.n_envs)
+    agent.build(
+        env_factory,
+        n_envs=args.n_envs,
+        n_steps=args.n_steps,
+        batch_size=args.batch_size,
+        use_subproc=args.subproc,
+    )
 
     checkpoint_dir = os.path.join(os.path.dirname(__file__), "..", "models", "checkpoints", args.asset)
     agent.train(timesteps=args.timesteps, checkpoint_dir=checkpoint_dir)

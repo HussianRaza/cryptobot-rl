@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.callbacks import CallbackList
 
 from agents.callbacks import MetricsCallback, make_checkpoint_callback
@@ -20,8 +20,6 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 PPO_HYPERPARAMS = dict(
     policy="MlpPolicy",
     n_steps=2048,
-    # 256 saturates T4 GPU better (8192 rollout steps → 32 minibatch updates/epoch);
-    # still divides 8192 evenly and is valid on CPU too
     batch_size=256,
     n_epochs=10,
     learning_rate=2.5e-4,
@@ -44,13 +42,27 @@ class PPOAgent:
     def __init__(self):
         self.model: PPO = None
 
-    def build(self, env_factory, n_envs: int = 4) -> "PPOAgent":
+    def build(
+        self,
+        env_factory,
+        n_envs: int = 4,
+        n_steps: int = None,
+        batch_size: int = None,
+        use_subproc: bool = False,
+    ) -> "PPOAgent":
         """Create model with vectorised environment.
 
         env_factory: zero-arg callable that returns a CryptoTradingEnv instance
+        use_subproc: use SubprocVecEnv for true CPU parallelism (recommended on Colab T4)
         """
-        vec_env = make_vec_env(env_factory, n_envs=n_envs, vec_env_cls=DummyVecEnv, seed=SEED)
-        self.model = PPO(env=vec_env, **PPO_HYPERPARAMS)
+        vec_cls = SubprocVecEnv if use_subproc and n_envs > 1 else DummyVecEnv
+        vec_env = make_vec_env(env_factory, n_envs=n_envs, vec_env_cls=vec_cls, seed=SEED)
+        hyperparams = {**PPO_HYPERPARAMS}
+        if n_steps is not None:
+            hyperparams["n_steps"] = n_steps
+        if batch_size is not None:
+            hyperparams["batch_size"] = batch_size
+        self.model = PPO(env=vec_env, **hyperparams)
         return self
 
     def train(
