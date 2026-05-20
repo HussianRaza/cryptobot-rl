@@ -1,3 +1,12 @@
+---
+title: Cryptobot RL API
+emoji: 📈
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 # Crypto RL Trading Bot
 
 A reinforcement learning trading bot for BTC, ETH, and SOL using PPO (Proximal Policy Optimization) with a custom Gymnasium environment, four classical baselines, a FastAPI backend, and a React dashboard.
