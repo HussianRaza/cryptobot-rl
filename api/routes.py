@@ -290,14 +290,17 @@ async def paper_trading(
     if cached:
         return cached
 
-    df = _fetch_live_ohlcv(asset, days)
     initial_balance = 10_000.0
 
     if agent == "ppo":
+        # Fetch extra rows so the 50-step lookback window is always satisfied
+        df = _fetch_live_ohlcv(asset, days + 70)
         df_train = _load_split(asset, "train")
         train_stats = _train_stats(df_train)
         trade_log, equity = _run_ppo(asset, df, train_stats, request)
+        equity = equity.iloc[-days:]  # trim to requested window for display
     else:
+        df = _fetch_live_ohlcv(asset, days)
         trade_log, equity = _run_baseline(agent, df, initial_balance)
     metrics = compute_all(equity, trade_log)
 
