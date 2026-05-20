@@ -1,154 +1,208 @@
 import { useEffect, useState } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from "recharts";
 import { fetchPaperTrading } from "../api";
 import type { PaperTradingResult, TradeEntry } from "../api";
 
-const PAPER_AGENTS = ["ppo", "buy_hold", "mean_rev", "momentum", "random"] as const;
-const DAYS_OPTIONS = [30, 60, 90, 180] as const;
+const PAPER_AGENTS   = ["ppo", "buy_hold", "mean_rev", "momentum", "random"] as const;
+const DAYS_OPTIONS   = [30, 60, 90, 180] as const;
 
 interface Props { asset: string; }
 
 export default function PaperTrading({ asset }: Props) {
-  const [agent, setAgent] = useState<string>("buy_hold");
-  const [days, setDays] = useState<number>(60);
-  const [data, setData] = useState<PaperTradingResult | null>(null);
+  const [agent, setAgent] = useState("buy_hold");
+  const [days,  setDays]  = useState(60);
+  const [data,  setData]  = useState<PaperTradingResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error,   setError]   = useState("");
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   async function load() {
     setLoading(true); setError("");
-    try {
-      setData(await fetchPaperTrading(asset, agent, days));
-      setLastRefresh(new Date());
-    } catch (e) { setError(String(e)); }
+    try { setData(await fetchPaperTrading(asset, agent, days)); setLastRefresh(new Date()); }
+    catch (e) { setError(String(e)); }
     finally { setLoading(false); }
   }
 
   useEffect(() => { load(); }, [asset, agent, days]);
 
-  const signal = data?.current_signal;
-  const signalColor = signal === "long" ? "#4caf50" : "#aaa";
-  const signalLabel = signal === "long" ? "▲ LONG" : "— FLAT";
-  const pnlColor = data && data.pnl_pct >= 0 ? "#4caf50" : "#ef5350";
+  const isLong   = data?.current_signal === "long";
+  const pnlUp    = (data?.pnl_pct ?? 0) >= 0;
+  const gradId   = "paper-grad";
 
   const chartData = data?.equity_curve.map(p => ({
-    date: p.date.slice(0, 10),
-    value: Math.round(p.value),
+    date: p.date.slice(0, 10), value: Math.round(p.value),
   })) ?? [];
 
   return (
     <div>
       {/* Controls */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div>
-          <label style={{ color: "#888", fontSize: 12, display: "block", marginBottom: 4 }}>Strategy</label>
+          <div className="label" style={{ marginBottom: 6 }}>Strategy</div>
           <select
-            value={agent}
-            onChange={e => setAgent(e.target.value)}
-            style={{ background: "#1a1a2e", color: "#e0e0e0", border: "1px solid #333", borderRadius: 6, padding: "6px 10px" }}
+            value={agent} onChange={e => setAgent(e.target.value)}
+            style={{
+              background: "var(--bg-elevated)", color: "var(--text-primary)",
+              border: "1px solid var(--border)", borderRadius: "var(--radius-sm)",
+              padding: "6px 10px", fontSize: 12,
+            }}
           >
             {PAPER_AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
         </div>
         <div>
-          <label style={{ color: "#888", fontSize: 12, display: "block", marginBottom: 4 }}>Window</label>
+          <div className="label" style={{ marginBottom: 6 }}>Window</div>
           <select
-            value={days}
-            onChange={e => setDays(Number(e.target.value))}
-            style={{ background: "#1a1a2e", color: "#e0e0e0", border: "1px solid #333", borderRadius: 6, padding: "6px 10px" }}
+            value={days} onChange={e => setDays(Number(e.target.value))}
+            style={{
+              background: "var(--bg-elevated)", color: "var(--text-primary)",
+              border: "1px solid var(--border)", borderRadius: "var(--radius-sm)",
+              padding: "6px 10px", fontSize: 12,
+            }}
           >
             {DAYS_OPTIONS.map(d => <option key={d} value={d}>Last {d} days</option>)}
           </select>
         </div>
         <button
-          onClick={load}
-          disabled={loading}
-          style={{ marginTop: 18, padding: "6px 16px", background: "#1a3a5c", color: "#a0c4ff", border: "1px solid #2a4a7c", borderRadius: 6, cursor: "pointer" }}
+          onClick={load} disabled={loading}
+          style={{
+            padding: "6px 16px", borderRadius: "var(--radius-sm)",
+            background: "var(--bg-elevated)", border: "1px solid var(--border-bright)",
+            color: "var(--accent)", fontSize: 12,
+          }}
         >
-          {loading ? "Refreshing…" : "↻ Refresh"}
+          {loading ? "..." : "↻ Refresh"}
         </button>
         {lastRefresh && (
-          <span style={{ marginTop: 18, fontSize: 11, color: "#444" }}>
-            Live data · updated {lastRefresh.toLocaleTimeString()}
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
+            live · {lastRefresh.toLocaleTimeString()}
           </span>
         )}
       </div>
 
-      {error && <p style={{ color: "#ef5350" }}>Error: {error}</p>}
+      {error && (
+        <div style={{
+          background: "rgba(248,81,73,0.08)", border: "1px solid rgba(248,81,73,0.3)",
+          borderRadius: "var(--radius-sm)", padding: "10px 14px",
+          color: "var(--red)", fontSize: 12, marginBottom: 16,
+        }}>{error}</div>
+      )}
 
       {data && (
         <>
-          {/* Stats row */}
+          {/* Stats */}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-            <StatCard label="Current Value" value={`$${data.current_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} color="#a0c4ff" />
-            <StatCard label={`P&L (${days}d)`} value={`${data.pnl_pct >= 0 ? "+" : ""}${(data.pnl_pct * 100).toFixed(1)}%`} color={pnlColor} />
-            <StatCard label="Sharpe" value={data.metrics.sharpe.toFixed(2)} color="#a0c4ff" />
-            <StatCard label="Max DD" value={`${(data.metrics.max_drawdown * 100).toFixed(1)}%`} color="#ef5350" />
-            <div style={{ background: "#1a1a2e", padding: "12px 18px", borderRadius: 8, border: "1px solid #2a2a3e", minWidth: 110 }}>
-              <div style={{ color: "#888", fontSize: 12, marginBottom: 4 }}>Signal Today</div>
-              <div style={{ fontSize: 20, fontWeight: "bold", color: signalColor }}>{signalLabel}</div>
+            <div className="card" style={{ minWidth: 130 }}>
+              <div className="label" style={{ marginBottom: 8 }}>Portfolio Value</div>
+              <div className="num" style={{ color: "var(--text-primary)" }}>
+                ${data.current_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </div>
+            </div>
+            <div className="card" style={{ minWidth: 110 }}>
+              <div className="label" style={{ marginBottom: 8 }}>P&L ({days}d)</div>
+              <div className="num" style={{ color: pnlUp ? "var(--green)" : "var(--red)" }}>
+                {pnlUp ? "+" : ""}{(data.pnl_pct * 100).toFixed(1)}%
+              </div>
+            </div>
+            <div className="card" style={{ minWidth: 100 }}>
+              <div className="label" style={{ marginBottom: 8 }}>Sharpe</div>
+              <div className="num" style={{ color: data.metrics.sharpe > 0 ? "var(--green)" : "var(--red)" }}>
+                {data.metrics.sharpe.toFixed(2)}
+              </div>
+            </div>
+            <div className="card" style={{ minWidth: 100 }}>
+              <div className="label" style={{ marginBottom: 8 }}>Max DD</div>
+              <div className="num" style={{ color: "var(--red)" }}>
+                {(data.metrics.max_drawdown * 100).toFixed(1)}%
+              </div>
+            </div>
+            {/* Signal badge */}
+            <div className="card" style={{ minWidth: 120 }}>
+              <div className="label" style={{ marginBottom: 8 }}>Signal Today</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span
+                  className="pulse"
+                  style={{
+                    width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                    background: isLong ? "var(--green)" : "var(--text-muted)",
+                  }}
+                />
+                <span style={{
+                  fontSize: 15, fontWeight: 700,
+                  color: isLong ? "var(--green)" : "var(--text-secondary)",
+                }}>
+                  {isLong ? "LONG" : "FLAT"}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Equity chart */}
+          {/* Chart */}
           <div style={{ marginBottom: 24 }}>
-            <p style={{ color: "#888", fontSize: 12, margin: "0 0 8px" }}>
-              {asset.toUpperCase()} · {agent} · ${data.initial_balance.toLocaleString()} starting capital · live data from CoinGecko
-            </p>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                <XAxis dataKey="date" tick={{ fill: "#666", fontSize: 11 }} tickFormatter={v => v.slice(5)} />
-                <YAxis tick={{ fill: "#666", fontSize: 11 }} tickFormatter={v => `$${v.toLocaleString()}`} />
-                <ReferenceLine y={data.initial_balance} stroke="#444" strokeDasharray="4 4" label={{ value: "Start", fill: "#555", fontSize: 10 }} />
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
+              {asset.toUpperCase()} · {agent} · $10,000 starting capital · Yahoo Finance
+            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
+                <defs>
+                  <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor={pnlUp ? "#3fb950" : "#f85149"} stopOpacity={0.2} />
+                    <stop offset="95%" stopColor={pnlUp ? "#3fb950" : "#f85149"} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="date" tick={{ fill: "var(--text-muted)", fontSize: 10 }} tickFormatter={v => v.slice(5)} />
+                <YAxis tick={{ fill: "var(--text-muted)", fontSize: 10 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                <ReferenceLine y={data.initial_balance} stroke="var(--border-bright)" strokeDasharray="4 4"
+                  label={{ value: "Start", fill: "var(--text-muted)", fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={{ background: "#1a1a2e", border: "1px solid #333", color: "#eee" }}
+                  contentStyle={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
                   formatter={(v) => [`$${Number(v).toLocaleString()}`, "Portfolio"]}
                 />
-                <Line type="monotone" dataKey="value" stroke="#4f8ef7" dot={false} strokeWidth={2} />
-              </LineChart>
+                <Area type="monotone" dataKey="value"
+                  stroke={pnlUp ? "var(--green)" : "var(--red)"} strokeWidth={2}
+                  fill={`url(#${gradId})`} dot={false} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
 
           {/* Trade log */}
           {data.trade_log.length > 0 && (
             <>
-              <h4 style={{ color: "#a0c4ff", margin: "0 0 10px" }}>Trades</h4>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: "#1a1a2e" }}>
-                    {["Date", "Type", "Price", "Portfolio"].map(h => (
-                      <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#888", fontWeight: 500 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...data.trade_log].reverse().map((t: TradeEntry, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid #1a1a2e" }}>
-                      <td style={{ padding: "7px 12px", color: "#aaa" }}>{String(t.Date).slice(0, 10)}</td>
-                      <td style={{ padding: "7px 12px", color: t.type === "buy" ? "#4caf50" : "#ef5350", fontWeight: 600 }}>
-                        {t.type.toUpperCase()}
-                      </td>
-                      <td style={{ padding: "7px 12px" }}>${Number(t.Close).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                      <td style={{ padding: "7px 12px" }}>${Number(t.Net_worth).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+              <div className="label" style={{ marginBottom: 10 }}>Trades</div>
+              <div style={{ borderRadius: "var(--radius-md)", border: "1px solid var(--border)", overflow: "hidden" }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: "left" }}>Date</th>
+                      <th style={{ textAlign: "left" }}>Type</th>
+                      <th style={{ textAlign: "right" }}>Price</th>
+                      <th style={{ textAlign: "right" }}>Portfolio</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {[...data.trade_log].reverse().map((t: TradeEntry, i) => {
+                      const isBuy = t.type === "buy";
+                      return (
+                        <tr key={i} style={{ borderLeft: `3px solid ${isBuy ? "var(--green)" : "var(--red)"}` }}>
+                          <td style={{ color: "var(--text-secondary)" }}>{String(t.Date).slice(0, 10)}</td>
+                          <td>
+                            <span className={isBuy ? "badge badge-green" : "badge badge-red"} style={{ fontSize: 11 }}>
+                              {isBuy ? "▲ BUY" : "▼ SELL"}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: "right" }}>${Number(t.Close).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                          <td style={{ textAlign: "right" }}>${Number(t.Net_worth).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
         </>
       )}
-    </div>
-  );
-}
-
-function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <div style={{ background: "#1a1a2e", padding: "12px 18px", borderRadius: 8, border: "1px solid #2a2a3e", minWidth: 110 }}>
-      <div style={{ color: "#888", fontSize: 12, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: "bold", color }}>{value}</div>
     </div>
   );
 }

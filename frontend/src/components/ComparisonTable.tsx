@@ -2,34 +2,72 @@ import type { CompareRow } from "../api";
 
 interface Props { rows: CompareRow[]; }
 
-function pct(v: number) { return `${(v * 100).toFixed(2)}%`; }
+function pct(v: number) { return `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`; }
 function num(v: number) { return v.toFixed(3); }
 
 export default function ComparisonTable({ rows }: Props) {
+  const sorted = [...rows].sort((a, b) => b.sharpe - a.sharpe);
+  const maxSharpe = Math.max(...sorted.map(r => r.sharpe));
+
   return (
     <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+      <table className="data-table">
         <thead>
-          <tr style={{ background: "#2a2a4a", color: "#e0e0e0" }}>
-            {["Strategy", "Sharpe", "Max DD", "Total Return", "Win Rate", "Calmar"].map(h => (
-              <th key={h} style={{ padding: "8px 12px", textAlign: "right", borderBottom: "1px solid #444" }}
-                  {...(h === "Strategy" ? { style: { padding: "8px 12px", textAlign: "left", borderBottom: "1px solid #444" } } : {})}>
-                {h}
-              </th>
-            ))}
+          <tr>
+            <th style={{ textAlign: "left" }}>#</th>
+            <th style={{ textAlign: "left" }}>Strategy</th>
+            <th>Sharpe</th>
+            <th>Return</th>
+            <th>Max DD</th>
+            <th>Win Rate</th>
+            <th>Calmar</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
-            <tr key={row.strategy} style={{ background: i % 2 === 0 ? "#1a1a2e" : "#22223b" }}>
-              <td style={{ padding: "8px 12px", color: "#a0c4ff" }}>{row.strategy}</td>
-              <td style={{ padding: "8px 12px", textAlign: "right", color: row.sharpe >= 0 ? "#7cfc00" : "#ff6b6b" }}>{num(row.sharpe)}</td>
-              <td style={{ padding: "8px 12px", textAlign: "right" }}>{pct(row.max_drawdown)}</td>
-              <td style={{ padding: "8px 12px", textAlign: "right", color: row.total_return >= 0 ? "#7cfc00" : "#ff6b6b" }}>{pct(row.total_return)}</td>
-              <td style={{ padding: "8px 12px", textAlign: "right" }}>{pct(row.win_rate)}</td>
-              <td style={{ padding: "8px 12px", textAlign: "right", color: row.calmar >= 0 ? "#7cfc00" : "#ff6b6b" }}>{num(row.calmar)}</td>
-            </tr>
-          ))}
+          {sorted.map((row, i) => {
+            const isBest = row.sharpe === maxSharpe && row.sharpe > 0;
+            const sharpeBar = maxSharpe > 0 ? (row.sharpe / maxSharpe) * 80 : 0;
+            return (
+              <tr key={row.strategy}>
+                <td style={{ color: i === 0 ? "var(--yellow)" : "var(--text-muted)", fontWeight: i === 0 ? 700 : 400 }}>
+                  {i + 1}
+                </td>
+                <td>
+                  <span style={{
+                    color: isBest ? "var(--accent)" : "var(--text-primary)",
+                    fontWeight: isBest ? 700 : 400,
+                  }}>
+                    {row.strategy}
+                  </span>
+                  {isBest && <span style={{ marginLeft: 8, fontSize: 10, color: "var(--yellow)" }}>★ best</span>}
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                    <div style={{
+                      height: 4, width: Math.max(sharpeBar, 0),
+                      background: row.sharpe > 0 ? "var(--green)" : "var(--red)",
+                      borderRadius: 2, opacity: 0.7,
+                    }} />
+                    <span style={{ color: row.sharpe > 0 ? "var(--green)" : "var(--red)", minWidth: 44, textAlign: "right" }}>
+                      {num(row.sharpe)}
+                    </span>
+                  </div>
+                </td>
+                <td style={{ textAlign: "right", color: row.total_return > 0 ? "var(--green)" : "var(--red)" }}>
+                  {pct(row.total_return)}
+                </td>
+                <td style={{ textAlign: "right", color: "var(--red)" }}>
+                  {pct(row.max_drawdown)}
+                </td>
+                <td style={{ textAlign: "right", color: "var(--text-secondary)" }}>
+                  {pct(row.win_rate)}
+                </td>
+                <td style={{ textAlign: "right", color: row.calmar > 0 ? "var(--green)" : "var(--red)" }}>
+                  {num(row.calmar)}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
