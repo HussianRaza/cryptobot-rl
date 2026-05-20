@@ -1,4 +1,3 @@
-import React from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import type { EquityPoint } from "../api";
 
@@ -22,7 +21,7 @@ export default function EquityCurve({ data, title }: Props) {
           <YAxis tick={{ fill: "#aaa", fontSize: 11 }} tickFormatter={v => `$${v.toLocaleString()}`} />
           <Tooltip
             contentStyle={{ background: "#1a1a2e", border: "1px solid #444", color: "#eee" }}
-            formatter={(v: number) => [`$${v.toLocaleString()}`, "Portfolio"]}
+            formatter={(v) => [`$${Number(v).toLocaleString()}`, "Portfolio"]}
           />
           <Line type="monotone" dataKey="value" stroke="#4f8ef7" dot={false} strokeWidth={2} />
         </LineChart>

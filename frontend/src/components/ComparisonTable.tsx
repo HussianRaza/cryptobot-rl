@@ -1,4 +1,3 @@
-import React from "react";
 import type { CompareRow } from "../api";
 
 interface Props { rows: CompareRow[]; }

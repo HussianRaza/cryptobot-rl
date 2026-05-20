@@ -1,4 +1,3 @@
-import React from "react";
 
 const ASSETS = ["btc", "eth", "sol"];
 const AGENTS = ["ppo", "buy_hold", "mean_rev", "momentum", "random"];

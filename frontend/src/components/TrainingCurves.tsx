@@ -1,4 +1,3 @@
-import React from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import type { TrainingCurves as TCData } from "../api";
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface PriceData {
   bitcoin: { usd: number; usd_24h_change: number };

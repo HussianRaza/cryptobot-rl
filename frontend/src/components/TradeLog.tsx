@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import type { TradeEntry } from "../api";
 
 const PAGE_SIZE = 20;

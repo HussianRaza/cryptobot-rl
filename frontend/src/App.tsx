@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import AssetAgentSelector from "./components/AssetAgentSelector";
 import EquityCurve from "./components/EquityCurve";
 import ComparisonTable from "./components/ComparisonTable";

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from "recharts";
 import { fetchPaperTrading } from "../api";
 import type { PaperTradingResult, TradeEntry } from "../api";
@@ -104,7 +104,7 @@ export default function PaperTrading({ asset }: Props) {
                 <ReferenceLine y={data.initial_balance} stroke="#444" strokeDasharray="4 4" label={{ value: "Start", fill: "#555", fontSize: 10 }} />
                 <Tooltip
                   contentStyle={{ background: "#1a1a2e", border: "1px solid #333", color: "#eee" }}
-                  formatter={(v: number) => [`$${v.toLocaleString()}`, "Portfolio"]}
+                  formatter={(v) => [`$${Number(v).toLocaleString()}`, "Portfolio"]}
                 />
                 <Line type="monotone" dataKey="value" stroke="#4f8ef7" dot={false} strokeWidth={2} />
               </LineChart>
