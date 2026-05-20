@@ -17,10 +17,12 @@ type Tab = "backtest" | "compare" | "training" | "disclaimer";
 const tabStyle = (active: boolean): React.CSSProperties => ({
   padding: "8px 18px",
   cursor: "pointer",
+  borderTop: "none",
+  borderLeft: "none",
+  borderRight: "none",
   borderBottom: active ? "2px solid #4f8ef7" : "2px solid transparent",
   color: active ? "#4f8ef7" : "#aaa",
   background: "none",
-  border: "none",
   fontSize: 15,
 });
 
