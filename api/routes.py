@@ -245,31 +245,28 @@ COIN_IDS = {"btc": "bitcoin", "eth": "ethereum", "sol": "solana"}
 PAPER_AGENTS = [k for k in AGENT_KEYS if k != "ppo"]
 
 
-def _fetch_live_ohlcv(asset: str, days: int) -> pd.DataFrame:
-    """Fetch daily OHLCV from CoinGecko (no API key required)."""
-    coin = COIN_IDS[asset]
-    url = (
-        f"https://api.coingecko.com/api/v3/coins/{coin}/market_chart"
-        f"?vs_currency=usd&days={days}&interval=daily"
-    )
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "cryptobot-rl/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read())
-    except Exception as e:
-        raise HTTPException(503, f"CoinGecko unavailable: {e}")
+YFINANCE_IDS = {"btc": "BTC-USD", "eth": "ETH-USD", "sol": "SOL-USD"}
 
-    prices = data["prices"]
-    volumes = data.get("total_volumes", [])
-    rows = []
-    for i, (ts, close) in enumerate(prices):
-        vol = volumes[i][1] if i < len(volumes) else 0.0
-        rows.append({
-            "date": pd.Timestamp(ts, unit="ms").normalize(),
-            "open": close, "high": close, "low": close,
-            "close": close, "volume": vol,
-        })
-    return pd.DataFrame(rows).drop_duplicates("date").reset_index(drop=True)
+
+def _fetch_live_ohlcv(asset: str, days: int) -> pd.DataFrame:
+    """Fetch daily OHLCV via yfinance (Yahoo Finance)."""
+    import yfinance as yf
+    from datetime import datetime, timedelta
+    end = datetime.utcnow().date()
+    start = end - timedelta(days=days + 5)  # small buffer for weekends/gaps
+    try:
+        ticker = yf.download(YFINANCE_IDS[asset], start=str(start), end=str(end),
+                             interval="1d", progress=False, auto_adjust=True)
+    except Exception as e:
+        raise HTTPException(503, f"yfinance unavailable: {e}")
+    if ticker.empty:
+        raise HTTPException(503, f"No data returned for {asset}")
+
+    ticker = ticker.tail(days).reset_index()
+    ticker.columns = [c[0].lower() if isinstance(c, tuple) else c.lower() for c in ticker.columns]
+    ticker = ticker.rename(columns={"date": "date"})
+    ticker["date"] = pd.to_datetime(ticker["date"])
+    return ticker[["date", "open", "high", "low", "close", "volume"]].reset_index(drop=True)
 
 
 @router.get("/api/paper-trading", response_model=PaperTradingResponse)
