@@ -54,6 +54,25 @@ def _equity_to_list(equity: pd.Series) -> list[dict]:
     return [{"date": str(d), "value": float(v)} for d, v in zip(equity.index, equity.values)]
 
 
+def _sanitize_trade_log(trade_log: list) -> list:
+    """Convert non-JSON-serializable values to plain Python types."""
+    import numpy as np
+    clean = []
+    for entry in trade_log:
+        sanitized = {}
+        for k, v in entry.items():
+            if isinstance(v, (pd.Timestamp, np.datetime64)) or hasattr(v, 'isoformat'):
+                sanitized[k] = str(v)
+            elif isinstance(v, np.integer):
+                sanitized[k] = int(v)
+            elif isinstance(v, np.floating):
+                sanitized[k] = float(v)
+            else:
+                sanitized[k] = v
+        clean.append(sanitized)
+    return clean
+
+
 def _run_ppo(asset: str, df_test: pd.DataFrame, train_stats: dict, request: Request):
     """Use preloaded PPO model from app state."""
     model_key = f"ppo_{asset}"
@@ -115,7 +134,7 @@ async def backtest(
     metrics = compute_all(equity, trade_log)
     result = BacktestResponse(
         metrics=Metrics(**metrics),
-        trade_log=trade_log,
+        trade_log=_sanitize_trade_log(trade_log),
         equity_curve=_equity_to_list(equity),
     )
     cache_store.set(cache_key, result)

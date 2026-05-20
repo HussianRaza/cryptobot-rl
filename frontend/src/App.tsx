@@ -7,8 +7,8 @@ import TradeLog from "./components/TradeLog";
 import DisclaimerPage from "./components/DisclaimerPage";
 import {
   fetchBacktest, fetchCompare, fetchTrainingCurves,
-  BacktestResult, CompareResult, TrainingCurves as TCData,
 } from "./api";
+import type { BacktestResult, CompareResult, TrainingCurves as TCData } from "./api";
 
 type Tab = "backtest" | "compare" | "training" | "disclaimer";
 
