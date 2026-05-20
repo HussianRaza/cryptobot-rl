@@ -7,7 +7,7 @@ function num(v: number) { return v.toFixed(3); }
 
 export default function ComparisonTable({ rows }: Props) {
   const sorted = [...rows].sort((a, b) => b.sharpe - a.sharpe);
-  const maxSharpe = Math.max(...sorted.map(r => r.sharpe));
+  const maxSharpe = sorted[0]?.sharpe ?? 0;
 
   return (
     <div style={{ overflowX: "auto" }}>
@@ -25,7 +25,7 @@ export default function ComparisonTable({ rows }: Props) {
         </thead>
         <tbody>
           {sorted.map((row, i) => {
-            const isBest = row.sharpe === maxSharpe && row.sharpe > 0;
+            const isBest = i === 0 && maxSharpe > 0;
             const sharpeBar = maxSharpe > 0 ? (row.sharpe / maxSharpe) * 80 : 0;
             return (
               <tr key={row.strategy}>
