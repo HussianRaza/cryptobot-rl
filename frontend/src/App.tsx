@@ -5,6 +5,8 @@ import ComparisonTable from "./components/ComparisonTable";
 import TrainingCurves from "./components/TrainingCurves";
 import TradeLog from "./components/TradeLog";
 import DisclaimerPage from "./components/DisclaimerPage";
+import PriceTicker from "./components/PriceTicker";
+import FearGreed from "./components/FearGreed";
 import {
   fetchBacktest, fetchCompare, fetchTrainingCurves,
 } from "./api";
@@ -62,15 +64,19 @@ export default function App() {
 
   return (
     <div style={{ background: "#0f0f1a", minHeight: "100vh", color: "#e0e0e0", fontFamily: "sans-serif" }}>
-      <header style={{ padding: "16px 24px", borderBottom: "1px solid #333" }}>
-        <h1 style={{ margin: 0, fontSize: 22, color: "#a0c4ff" }}>Crypto RL Trading Bot</h1>
-        <p style={{ margin: "4px 0 0", color: "#888", fontSize: 13 }}>
-          BTC · ETH · SOL — PPO vs Classical Strategies (2024 Test Period)
-        </p>
+      <header style={{ padding: "14px 24px", borderBottom: "1px solid #222", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 20, color: "#a0c4ff" }}>Crypto RL Trading Bot</h1>
+          <p style={{ margin: "3px 0 0", color: "#666", fontSize: 12 }}>
+            PPO vs Classical Strategies · 2024 Test Period
+          </p>
+        </div>
+        <PriceTicker />
       </header>
 
-      <div style={{ padding: "16px 24px" }}>
+      <div style={{ padding: "14px 24px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
         <AssetAgentSelector asset={asset} agent={agent} onAssetChange={setAsset} onAgentChange={setAgent} />
+        <FearGreed />
       </div>
 
       <nav style={{ display: "flex", padding: "0 24px", borderBottom: "1px solid #333" }}>
