@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, R
 import { fetchPaperTrading } from "../api";
 import type { PaperTradingResult, TradeEntry } from "../api";
 
-const PAPER_AGENTS = ["buy_hold", "mean_rev", "momentum", "random"] as const;
+const PAPER_AGENTS = ["ppo", "buy_hold", "mean_rev", "momentum", "random"] as const;
 const DAYS_OPTIONS = [30, 60, 90, 180] as const;
 
 interface Props { asset: string; }

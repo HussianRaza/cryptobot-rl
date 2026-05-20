@@ -242,7 +242,7 @@ async def disclaimer():
 
 
 COIN_IDS = {"btc": "bitcoin", "eth": "ethereum", "sol": "solana"}
-PAPER_AGENTS = [k for k in AGENT_KEYS if k != "ppo"]
+PAPER_AGENTS = AGENT_KEYS
 
 
 YFINANCE_IDS = {"btc": "BTC-USD", "eth": "ETH-USD", "sol": "SOL-USD"}
@@ -271,6 +271,7 @@ def _fetch_live_ohlcv(asset: str, days: int) -> pd.DataFrame:
 
 @router.get("/api/paper-trading", response_model=PaperTradingResponse)
 async def paper_trading(
+    request: Request,
     asset: Annotated[str, Query()] = "btc",
     agent: Annotated[str, Query()] = "buy_hold",
     days: Annotated[int, Query()] = 60,
@@ -291,7 +292,13 @@ async def paper_trading(
 
     df = _fetch_live_ohlcv(asset, days)
     initial_balance = 10_000.0
-    trade_log, equity = _run_baseline(agent, df, initial_balance)
+
+    if agent == "ppo":
+        df_train = _load_split(asset, "train")
+        train_stats = _train_stats(df_train)
+        trade_log, equity = _run_ppo(asset, df, train_stats, request)
+    else:
+        trade_log, equity = _run_baseline(agent, df, initial_balance)
     metrics = compute_all(equity, trade_log)
 
     # Determine current signal: is strategy currently holding a position?
