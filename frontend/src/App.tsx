@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import EquityCurve from "./components/EquityCurve";
 import ComparisonTable from "./components/ComparisonTable";
-import TrainingCurves from "./components/TrainingCurves";
 import TradeLog from "./components/TradeLog";
 import DisclaimerPage from "./components/DisclaimerPage";
 import PriceTicker from "./components/PriceTicker";
 import FearGreed from "./components/FearGreed";
 import PaperTrading from "./components/PaperTrading";
-import { fetchBacktest, fetchCompare, fetchTrainingCurves } from "./api";
-import type { BacktestResult, CompareResult, TrainingCurves as TCData } from "./api";
+import { fetchBacktest, fetchCompare } from "./api";
+import type { BacktestResult, CompareResult } from "./api";
 
-type Tab = "backtest" | "compare" | "paper" | "training" | "disclaimer";
+type Tab = "backtest" | "compare" | "paper" | "disclaimer";
 
 const ASSETS = ["btc", "eth", "sol"] as const;
 const AGENTS = ["ppo", "buy_hold", "mean_rev", "momentum", "random"] as const;
@@ -18,7 +17,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "backtest",   label: "Backtest" },
   { key: "compare",    label: "Compare" },
   { key: "paper",      label: "Live Paper" },
-  { key: "training",   label: "Training" },
   { key: "disclaimer", label: "Disclaimer" },
 ];
 
@@ -32,14 +30,12 @@ export default function App() {
   const [tab, setTab]     = useState<Tab>("backtest");
   const [backtest, setBacktest] = useState<BacktestResult | null>(null);
   const [compare,  setCompare]  = useState<CompareResult | null>(null);
-  const [curves,   setCurves]   = useState<TCData | null>(null);
   const [loading, setLoading]   = useState(false);
   const [error,   setError]     = useState("");
 
   useEffect(() => {
     if (tab === "backtest") load(fetchBacktest(asset, agent), setBacktest);
     if (tab === "compare")  load(fetchCompare(asset), setCompare);
-    if (tab === "training") load(fetchTrainingCurves(asset), setCurves);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asset, agent, tab]);
 
@@ -233,9 +229,6 @@ export default function App() {
 
             {/* ── Paper Trading ── */}
             {tab === "paper" && <PaperTrading asset={asset} />}
-
-            {/* ── Training ── */}
-            {tab === "training" && curves && <TrainingCurves data={curves} />}
 
             {/* ── Disclaimer ── */}
             {tab === "disclaimer" && <DisclaimerPage />}
