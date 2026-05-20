@@ -1,4 +1,4 @@
-const BASE = "http://localhost:8000";
+const BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 
 export interface Metrics {
   sharpe: number;
@@ -38,6 +38,19 @@ export interface CompareResult { asset: string; rows: CompareRow[]; }
 export interface TrainingCurves { asset: string; episodes: number[]; rewards: number[]; }
 export interface PortfolioHistory { asset: string; agent: string; dates: string[]; values: number[]; }
 
+export interface PaperTradingResult {
+  asset: string;
+  agent: string;
+  days: number;
+  initial_balance: number;
+  current_value: number;
+  pnl_pct: number;
+  current_signal: "long" | "flat";
+  metrics: Metrics;
+  equity_curve: EquityPoint[];
+  trade_log: TradeEntry[];
+}
+
 async function apiFetch<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -58,3 +71,6 @@ export const fetchPortfolioHistory = (asset: string, agent: string) =>
 
 export const fetchDisclaimer = () =>
   apiFetch<{ text: string }>(`${BASE}/api/disclaimer`);
+
+export const fetchPaperTrading = (asset: string, agent: string, days = 60) =>
+  apiFetch<PaperTradingResult>(`${BASE}/api/paper-trading?asset=${asset}&agent=${agent}&days=${days}`);

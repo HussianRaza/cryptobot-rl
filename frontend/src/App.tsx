@@ -7,12 +7,13 @@ import TradeLog from "./components/TradeLog";
 import DisclaimerPage from "./components/DisclaimerPage";
 import PriceTicker from "./components/PriceTicker";
 import FearGreed from "./components/FearGreed";
+import PaperTrading from "./components/PaperTrading";
 import {
   fetchBacktest, fetchCompare, fetchTrainingCurves,
 } from "./api";
 import type { BacktestResult, CompareResult, TrainingCurves as TCData } from "./api";
 
-type Tab = "backtest" | "compare" | "training" | "disclaimer";
+type Tab = "backtest" | "compare" | "paper" | "training" | "disclaimer";
 
 const tabStyle = (active: boolean): React.CSSProperties => ({
   padding: "8px 18px",
@@ -82,9 +83,9 @@ export default function App() {
       </div>
 
       <nav style={{ display: "flex", padding: "0 24px", borderBottom: "1px solid #333" }}>
-        {(["backtest", "compare", "training", "disclaimer"] as Tab[]).map(t => (
+        {(["backtest", "compare", "paper", "training", "disclaimer"] as Tab[]).map(t => (
           <button key={t} style={tabStyle(tab === t)} onClick={() => setTab(t)}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === "paper" ? "🟢 Live Paper" : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </nav>
@@ -121,6 +122,8 @@ export default function App() {
             <ComparisonTable rows={compare.rows} />
           </div>
         )}
+
+        {tab === "paper" && <PaperTrading asset={asset} />}
 
         {tab === "training" && curves && <TrainingCurves data={curves} />}
 

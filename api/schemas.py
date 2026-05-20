@@ -46,3 +46,16 @@ class PortfolioHistoryResponse(BaseModel):
 
 class DisclaimerResponse(BaseModel):
     text: str
+
+
+class PaperTradingResponse(BaseModel):
+    asset: str
+    agent: str
+    days: int
+    initial_balance: float
+    current_value: float
+    pnl_pct: float
+    current_signal: str   # "long" | "flat"
+    metrics: Metrics
+    equity_curve: list[dict[str, Any]]
+    trade_log: list[dict[str, Any]]

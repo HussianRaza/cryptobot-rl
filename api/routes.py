@@ -1,6 +1,8 @@
 """FastAPI route handlers for the 5 API endpoints."""
 import os
 import json
+import time
+import urllib.request
 from typing import Annotated
 
 import pandas as pd
@@ -10,7 +12,7 @@ from api import cache as cache_store
 from api.schemas import (
     BacktestResponse, CompareResponse, CompareRow,
     TrainingCurvesResponse, PortfolioHistoryResponse, DisclaimerResponse,
-    Metrics,
+    PaperTradingResponse, Metrics,
 )
 from baselines.buy_and_hold import BuyAndHold
 from baselines.mean_reversion import MeanReversion
@@ -237,3 +239,81 @@ async def disclaimer():
         return DisclaimerResponse(text="No disclaimer found.")
     with open(disclaimer_path) as f:
         return DisclaimerResponse(text=f.read())
+
+
+COIN_IDS = {"btc": "bitcoin", "eth": "ethereum", "sol": "solana"}
+PAPER_AGENTS = [k for k in AGENT_KEYS if k != "ppo"]
+
+
+def _fetch_live_ohlcv(asset: str, days: int) -> pd.DataFrame:
+    """Fetch daily OHLCV from CoinGecko (no API key required)."""
+    coin = COIN_IDS[asset]
+    url = (
+        f"https://api.coingecko.com/api/v3/coins/{coin}/market_chart"
+        f"?vs_currency=usd&days={days}&interval=daily"
+    )
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "cryptobot-rl/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+    except Exception as e:
+        raise HTTPException(503, f"CoinGecko unavailable: {e}")
+
+    prices = data["prices"]
+    volumes = data.get("total_volumes", [])
+    rows = []
+    for i, (ts, close) in enumerate(prices):
+        vol = volumes[i][1] if i < len(volumes) else 0.0
+        rows.append({
+            "date": pd.Timestamp(ts, unit="ms").normalize(),
+            "open": close, "high": close, "low": close,
+            "close": close, "volume": vol,
+        })
+    return pd.DataFrame(rows).drop_duplicates("date").reset_index(drop=True)
+
+
+@router.get("/api/paper-trading", response_model=PaperTradingResponse)
+async def paper_trading(
+    asset: Annotated[str, Query()] = "btc",
+    agent: Annotated[str, Query()] = "buy_hold",
+    days: Annotated[int, Query()] = 60,
+):
+    if asset not in ASSETS:
+        raise HTTPException(400, f"asset must be one of {ASSETS}")
+    if agent not in PAPER_AGENTS:
+        raise HTTPException(400, f"paper trading supports: {PAPER_AGENTS}")
+    if not (7 <= days <= 365):
+        raise HTTPException(400, "days must be between 7 and 365")
+
+    # 5-minute cache bucket so live data refreshes periodically
+    bucket = int(time.time() / 300)
+    cache_key = ("paper_trading", asset, agent, days, bucket)
+    cached = cache_store.get(cache_key)
+    if cached:
+        return cached
+
+    df = _fetch_live_ohlcv(asset, days)
+    initial_balance = 10_000.0
+    trade_log, equity = _run_baseline(agent, df, initial_balance)
+    metrics = compute_all(equity, trade_log)
+
+    # Determine current signal: is strategy currently holding a position?
+    buys = sum(1 for t in trade_log if t["type"] == "buy")
+    sells = sum(1 for t in trade_log if t["type"] == "sell")
+    current_signal = "long" if buys > sells else "flat"
+
+    current_value = float(equity.iloc[-1])
+    result = PaperTradingResponse(
+        asset=asset,
+        agent=agent,
+        days=days,
+        initial_balance=initial_balance,
+        current_value=current_value,
+        pnl_pct=(current_value - initial_balance) / initial_balance,
+        current_signal=current_signal,
+        metrics=Metrics(**metrics),
+        equity_curve=_equity_to_list(equity),
+        trade_log=_sanitize_trade_log(trade_log),
+    )
+    cache_store.set(cache_key, result)
+    return result
