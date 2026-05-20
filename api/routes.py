@@ -248,6 +248,34 @@ PAPER_AGENTS = AGENT_KEYS
 YFINANCE_IDS = {"btc": "BTC-USD", "eth": "ETH-USD", "sol": "SOL-USD"}
 
 
+def _add_indicators(df: pd.DataFrame) -> pd.DataFrame:
+    """Compute the same indicators as compute_indicators.py for live data."""
+    import numpy as np
+    from ta.trend import MACD, EMAIndicator
+    from ta.volatility import BollingerBands
+    from ta.momentum import RSIIndicator
+
+    close  = df["close"]
+    volume = df["volume"]
+
+    df["rsi"] = RSIIndicator(close=close, window=14, fillna=True).rsi()
+
+    macd = MACD(close=close, window_slow=26, window_fast=12, window_sign=9, fillna=True)
+    df["macd_diff"] = macd.macd_diff()
+
+    bb = BollingerBands(close=close, window=20, window_dev=2, fillna=True)
+    df["bb_width"] = (bb.bollinger_hband() - bb.bollinger_lband()) / bb.bollinger_mavg().replace(0, float("nan"))
+
+    ema50 = EMAIndicator(close=close, window=50, fillna=True).ema_indicator()
+    df["ema50_dist"] = (close - ema50) / ema50.replace(0, float("nan"))
+
+    vol_mean = volume.rolling(20, min_periods=1).mean()
+    vol_std  = volume.rolling(20, min_periods=1).std().replace(0, float("nan"))
+    df["vol_zscore"] = (volume - vol_mean) / vol_std
+
+    return df.fillna(0)
+
+
 def _fetch_live_ohlcv(asset: str, days: int) -> pd.DataFrame:
     """Fetch daily OHLCV via yfinance (Yahoo Finance)."""
     import yfinance as yf
@@ -295,6 +323,7 @@ async def paper_trading(
     if agent == "ppo":
         # Fetch extra rows so the 50-step lookback window is always satisfied
         df = _fetch_live_ohlcv(asset, days + 70)
+        df = _add_indicators(df)   # env requires rsi, macd_diff, bb_width, ema50_dist, vol_zscore
         df_train = _load_split(asset, "train")
         train_stats = _train_stats(df_train)
         trade_log, equity = _run_ppo(asset, df, train_stats, request)
